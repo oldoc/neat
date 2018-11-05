@@ -70,6 +70,17 @@ class BaseGene(object):
             else:
                 setattr(new_gene, a.name, getattr(gene2, a.name))
 
+# @@@@@@@@@@ andrew begin
+
+            if (random() > 0.7) and ((a.name == 'weight') or (a.name == 'bias')):
+                lamda = random()
+                tmpa = getattr(self, a.name)
+                tmpb = getattr(gene2, a.name)
+                tmp = tmpa * lamda + tmpb * (1 - lamda)
+                setattr(new_gene, a.name, tmp)
+
+# @@@@@@@@@@ andrew end
+
         return new_gene
 
 

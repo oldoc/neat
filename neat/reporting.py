@@ -148,6 +148,7 @@ class StdOutReporter(BaseReporter):
                                                                      best_genome.key))
  # andrew add
         if (best_genome.fitness > self.bestFitness):
+            self.bestFitness = best_genome.fitness
             res = open("result.txt", "a")
             res.write('\nBest genome:\n{!s}'.format(best_genome))
             res.close()
