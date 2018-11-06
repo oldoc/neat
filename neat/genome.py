@@ -3,7 +3,7 @@ from __future__ import division, print_function
 
 
 from itertools import count
-from random import choice, random, shuffle
+from random import choice, random, shuffle, randint
 
 import sys
 
@@ -40,7 +40,9 @@ class DefaultGenomeConfig(object):
                         ConfigParameter('node_delete_prob', float),
                         ConfigParameter('single_structural_mutation', bool, 'false'),
                         ConfigParameter('structural_mutation_surer', str, 'default'),
-                        ConfigParameter('initial_connection', str, 'unconnected')]
+                        ConfigParameter('initial_connection', str, 'unconnected'),
+                        ConfigParameter('num_layer', int),
+                        ConfigParameter('num_cnn_layer', int)]
 
         # Gather configuration data from the gene classes.
         self.node_gene_type = params['node_gene_type']
@@ -168,6 +170,7 @@ class DefaultGenome(object):
         # (gene_key, gene) pairs for gene sets.
         self.connections = {}
         self.nodes = {}
+        self.layer = []
 
         # Fitness results.
         self.fitness = None
@@ -175,20 +178,45 @@ class DefaultGenome(object):
     def configure_new(self, config):
         """Configure a new genome based on the given configuration."""
 
+        # Create layer: cnn layer & all to all layer
+        for i in range(config.num_cnn_layer):
+            self.layer.append(['cnn', set()])
+        for i in range(config.num_cnn_layer, config.num_layer):
+            self.layer.append(['ata', set()])
+
         # Create node genes for the output pins.
         for node_key in config.output_keys:
-            self.nodes[node_key] = self.create_node(config, node_key)
+            self.nodes[node_key] = self.create_node(config, node_key, config.num_layer)
+        # Add output layer nodes
+        self.layer[-1][1] = set(config.output_keys)
 
         # Add hidden nodes if requested.
+        hidden_node_key = set()
         if config.num_hidden > 0:
             for i in range(config.num_hidden):
                 node_key = config.get_new_node_key(self.nodes)
                 assert node_key not in self.nodes
-                node = self.create_node(config, node_key)
+                node = self.create_node(config, node_key, -198043)
                 self.nodes[node_key] = node
+                hidden_node_key.add(node_key)
+
+        # Assign nodes to layers, make sure every layer has at least one node
+        for i in range(config.num_layer - 1):
+            node_key = hidden_node_key.pop()
+            self.layer[i][1].add(node_key)
+            self.nodes[node_key].layer = i
+
+        # Assign the left nodes to layers randomly
+        while hidden_node_key:
+            layer_nums = randint(0, config.num_layer - 2)
+            node_key = hidden_node_key.pop()
+            self.layer[layer_nums][1].add(node_key)
+            self.nodes[node_key].layer = layer_nums
 
         # Add connections based on initial connectivity type.
 
+        # fs_neat is not used in cnn
+        """
         if 'fs_neat' in config.initial_connection:
             if config.initial_connection == 'fs_neat_nohidden':
                 self.connect_fs_neat_nohidden(config)
@@ -203,6 +231,10 @@ class DefaultGenome(object):
                         sep='\n', file=sys.stderr);
                 self.connect_fs_neat_nohidden(config)
         elif 'full' in config.initial_connection:
+        """
+
+        # TODO: add layer to following functions
+        if 'full' in config.initial_connection:
             if config.initial_connection == 'full_nodirect':
                 self.connect_full_nodirect(config)
             elif config.initial_connection == 'full_direct':
@@ -311,7 +343,7 @@ class DefaultGenome(object):
         # Choose a random connection to split
         conn_to_split = choice(list(self.connections.values()))
         new_node_id = config.get_new_node_key(self.nodes)
-        ng = self.create_node(config, new_node_id)
+        ng = self.create_node(config, new_node_id, -198043)
         self.nodes[new_node_id] = ng
 
         # Disable this connection and create two new connections joining its nodes via
@@ -465,8 +497,8 @@ class DefaultGenome(object):
         return s
 
     @staticmethod
-    def create_node(config, node_id):
-        node = config.node_gene_type(node_id)
+    def create_node(config, node_id, layer):
+        node = config.node_gene_type(node_id, layer)
         node.init_attributes(config)
         return node
 

@@ -82,8 +82,9 @@ def hit(label, input, net):
         return False
 
 def eval_genomes(genomes, config):
-    batch_size = 500
-    start = int(random() * (train_images_sum - batch_size))
+    batch_size = 5
+    # start = int(random() * (train_images_sum - batch_size))
+    start = 0
     for genome_id, genome in genomes:
         hitCount = 0
 

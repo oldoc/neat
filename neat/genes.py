@@ -51,7 +51,10 @@ class BaseGene(object):
             setattr(self, a.name, a.mutate_value(v, config))
 
     def copy(self):
-        new_gene = self.__class__(self.key)
+        if isinstance(self, DefaultNodeGene):
+            new_gene = self.__class__(self.key, self.layer)
+        else:
+            new_gene = self.__class__(self.key)
         for a in self._gene_attributes:
             setattr(new_gene, a.name, getattr(self, a.name))
 
@@ -61,9 +64,14 @@ class BaseGene(object):
         """ Creates a new gene randomly inheriting attributes from its parents."""
         assert self.key == gene2.key
 
+        if isinstance(self, DefaultNodeGene):
+            assert self.layer == gene2.layer
+            new_gene = self.__class__(self.key, self.layer)
+        else:
+            new_gene = self.__class__(self.key)
+
         # Note: we use "a if random() > 0.5 else b" instead of choice((a, b))
         # here because `choice` is substantially slower.
-        new_gene = self.__class__(self.key)
         for a in self._gene_attributes:
             if random() > 0.5:
                 setattr(new_gene, a.name, getattr(self, a.name))
@@ -93,9 +101,11 @@ class DefaultNodeGene(BaseGene):
                         StringAttribute('activation', options='sigmoid'),
                         StringAttribute('aggregation', options='sum')]
 
-    def __init__(self, key):
+    def __init__(self, key, layer):
         assert isinstance(key, int), "DefaultNodeGene key must be an int, not {!r}".format(key)
         BaseGene.__init__(self, key)
+        # Added by Andrew
+        self.layer = layer
 
     def distance(self, other, config):
         d = abs(self.bias - other.bias) + abs(self.response - other.response)

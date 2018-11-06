@@ -3,7 +3,7 @@
 [NEAT]
 fitness_criterion     = max
 fitness_threshold     = 0.7
-pop_size              = 16
+pop_size              = 10
 reset_on_extinction   = False
 
 [DefaultGenome]
@@ -67,6 +67,10 @@ weight_min_value        = -30
 weight_mutate_power     = 0.05
 weight_mutate_rate      = 0.08
 weight_replace_rate     = 0.1
+
+# layer information
+num_layer               = 5
+num_cnn_layer           = 3
 
 [DefaultSpeciesSet]
 compatibility_threshold = 300.0
