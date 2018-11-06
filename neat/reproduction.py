@@ -104,6 +104,7 @@ class DefaultReproduction(DefaultClassConfig):
                 remaining_species.append(stag_s)
         # The above comment was not quite what was happening - now getting fitnesses
         # only from members of non-stagnated species.
+        #print("#########################################################################{0}".format(remaining_species.__len__()))
 
         # No species left.
         if not remaining_species:

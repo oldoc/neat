@@ -86,7 +86,7 @@ class Population(object):
             self.reporters.start_generation(self.generation)
 
             # Evaluate all genomes using the user-provided function.
-            fitness_function(self.generation, list(iteritems(self.population)), self.config)
+            fitness_function(list(iteritems(self.population)), self.config)
 
             # Gather and report statistics.
             best = None

@@ -6,6 +6,7 @@ from keras import models
 from keras import layers
 from keras.utils import to_categorical
 import numpy as np
+from random import random
 
 # from __future__ import print_function
 import neat
@@ -26,8 +27,8 @@ eval_image = train_images[:eval_len]
 eval_labels = train_labels[:eval_len]
 
 # for layer design
-# train_images = train_images[:,:5]
-# test_images = test_images[:, :5]
+#train_images = train_images[:,:5]
+#test_images = test_images[:, :5]
 
 # opt for MNIST
 def static():
@@ -80,13 +81,13 @@ def hit(label, input, net):
     else:
         return False
 
-def eval_genomes(generation, genomes, config):
-    batch_size = 20
+def eval_genomes(genomes, config):
+    batch_size = 10
+    start = int(random() * (train_images_sum - batch_size))
     for genome_id, genome in genomes:
         hitCount = 0
 
-        for i in range(generation * batch_size % train_images_sum,
-                      (generation + 1) * batch_size % train_images_sum):
+        for i in range(start, start + batch_size):
             mnist_inputs = train_images[i]
             net = neat.nn.FeedForwardNetwork.create(genome, config)
             if (hit(train_labels[i], mnist_inputs, net)):
@@ -96,7 +97,7 @@ def eval_genomes(generation, genomes, config):
 # Load configuration.
 config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
                      neat.DefaultSpeciesSet, neat.DefaultStagnation,
-                     'config-mnist-layer')
+                     'config-mnist')
 
 # reset result file
 res = open("result.txt", "w")
@@ -110,6 +111,11 @@ p.add_reporter(neat.StdOutReporter(False))
 
 # Run until a solution is found.
 winner = p.run(eval_genomes)
+
+# Run for up to 300 generations.
+# pe = neat.ThreadedEvaluator(4, eval_genomes)
+# winner = p.run(pe.evaluate)
+# pe.stop()
 
 # Display the winning genome.
 print('\nBest genome:\n{!s}'.format(winner))
@@ -131,7 +137,7 @@ for i in range(0, 10):
 # test on test dataset
 winner_net = neat.nn.FeedForwardNetwork.create(winner, config)
 hitCount = 0
-for i in range(0, len(test_labels)):
+for i in range(0, 1000): #len(test_labels)
     if (hit(test_labels[i], test_images[i], winner_net)):
         hitCount += 1
 print("hit {0} of {1}".format(hitCount, len(test_labels)))
