@@ -42,7 +42,8 @@ class DefaultGenomeConfig(object):
                         ConfigParameter('structural_mutation_surer', str, 'default'),
                         ConfigParameter('initial_connection', str, 'unconnected'),
                         ConfigParameter('num_layer', int),
-                        ConfigParameter('num_cnn_layer', int)]
+                        ConfigParameter('num_cnn_layer', int),
+                        ConfigParameter('full_connect_input', bool)]
 
         # Gather configuration data from the gene classes.
         self.node_gene_type = params['node_gene_type']
@@ -182,11 +183,11 @@ class DefaultGenome(object):
         for i in range(config.num_cnn_layer):
             self.layer.append(['cnn', set()])
         for i in range(config.num_cnn_layer, config.num_layer):
-            self.layer.append(['ata', set()])
+            self.layer.append(['fc', set()])
 
         # Create node genes for the output pins.
         for node_key in config.output_keys:
-            self.nodes[node_key] = self.create_node(config, node_key, config.num_layer)
+            self.nodes[node_key] = self.create_node(config, node_key, config.num_layer - 1)
         # Add output layer nodes
         self.layer[-1][1] = set(config.output_keys)
 
@@ -299,7 +300,17 @@ class DefaultGenome(object):
                 # Homologous gene: combine genes from both parents.
                 self.nodes[key] = ng1.crossover(ng2)
 
-    def mutate(self, config):
+        # Create layer: cnn layer & all to all layer
+        for i in range(config.num_cnn_layer):
+            self.layer.append(['cnn', set()])
+        for i in range(config.num_cnn_layer, config.num_layer):
+            self.layer.append(['fc', set()])
+
+        # Add layer according to nodes in new genome
+        for node in iteritems(self.nodes):
+            self.layer[node[1].layer][1].add(node[1].key)
+
+    def mutate(self, config): 
         """ Mutates this genome. """
 
         if config.single_structural_mutation:
@@ -337,6 +348,45 @@ class DefaultGenome(object):
         for ng in self.nodes.values():
             ng.mutate(config)
 
+    # Added by Andrew @20181107
+    # Add a node to the network, if the added node in the first layer then judge if should add a full connection
+    # to all the input. Then add one connection to the former layer and one to the after layer.
+    # Note: The node cannot be added to the last layer!
+    def mutate_add_node(self, config):
+
+        # Choose the layer to add node (not the last layer)
+        layer_num = randint(0, config.num_layer - 2)
+        new_node_id = config.get_new_node_key(self.nodes)
+        ng = self.create_node(config, new_node_id, layer_num)
+
+        self.layer[layer_num][1].add(new_node_id)
+        self.nodes[new_node_id] = ng
+
+        # if the added node in first layer
+        if layer_num == 0:
+            # Add full connection between input and the first layer
+            if config.full_connect_input:
+                for input_id in config.input_keys:
+                    connection = self.create_connection(config, input_id, new_node_id)
+                    self.connections[connection.key] = connection
+            # Add one connction between input and the first layer
+            else:
+                input_id = choice(config.input_keys)
+                connection = self.create_connection(config, input_id, new_node_id)
+                self.connections[connection.key] = connection
+        # Not the first layer node, and one connection to a node in the former layer
+        else:
+            node_id = choice(list(self.layer[layer_num - 1][1]))
+            connection = self.create_connection(config, node_id, new_node_id)
+            self.connections[connection.key] = connection
+
+        # Add one connection to a node in the after layer
+        node_id = choice(list(self.layer[layer_num + 1][1]))
+        connection = self.create_connection(config, new_node_id, node_id)
+        self.connections[connection.key] = connection
+
+
+    """
     def mutate_add_node(self, config):
         if not self.connections:
             if config.check_structural_mutation_surer():
@@ -357,13 +407,15 @@ class DefaultGenome(object):
         i, o = conn_to_split.key
         self.add_connection(config, i, new_node_id, 1.0, True)
         self.add_connection(config, new_node_id, o, conn_to_split.weight, True)
-
+    """
+    # Not used
     def add_connection(self, config, input_key, output_key, weight, enabled):
         # TODO: Add further validation of this connection addition?
         assert isinstance(input_key, int)
         assert isinstance(output_key, int)
         assert output_key >= 0
         assert isinstance(enabled, bool)
+
         key = (input_key, output_key)
         connection = config.connection_gene_type(key)
         connection.init_attributes(config)
@@ -371,16 +423,56 @@ class DefaultGenome(object):
         connection.enabled = enabled
         self.connections[key] = connection
 
+    """
     def mutate_add_connection(self, config):
-        """
+        """"""
         Attempt to add a new connection, the only restriction being that the output
         node cannot be one of the network input pins.
-        """
+        """"""
         possible_outputs = list(iterkeys(self.nodes))
         out_node = choice(possible_outputs)
 
         possible_inputs = possible_outputs + config.input_keys
         in_node = choice(possible_inputs)
+
+        # Don't duplicate connections.
+        key = (in_node, out_node)
+        if key in self.connections:
+            # TODO: Should this be using mutation to/from rates? Hairy to configure...
+            if config.check_structural_mutation_surer():
+                self.connections[key].enabled = True
+            return
+
+        # Don't allow connections between two output nodes
+        if in_node in config.output_keys and out_node in config.output_keys:
+            return
+
+        # No need to check for connections between input nodes:
+        # they cannot be the output end of a connection (see above).
+
+        # For feed-forward networks, avoid creating cycles.
+        if config.feed_forward and creates_cycle(list(iterkeys(self.connections)), key):
+            return
+
+        cg = self.create_connection(config, in_node, out_node)
+        self.connections[cg.key] = cg
+
+    """
+    # Added by Andrew @20181107
+    # Add a connection to the network.
+    # TODO: Make sure the in_node is in the smaller layer, and out_node in the next layer
+    def mutate_add_connection(self, config):
+
+        # Choose the outnode layer
+        layer_num = randint(0, config.num_layer - 1)
+
+        # If choose out_node form the first layer, the input_node should choose from input ot the network.
+        if layer_num == 0:
+            out_node = choice(list(self.layer[layer_num][1]))
+            in_node = choice(config.input_keys)
+        else:
+            out_node = choice(list(self.layer[layer_num][1]))
+            in_node = choice(list(self.layer[layer_num - 1][1]))
 
         # Don't duplicate connections.
         key = (in_node, out_node)

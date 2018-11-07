@@ -49,6 +49,7 @@ node_delete_prob        = 0.1
 num_hidden              = 20
 num_inputs              = 784
 num_outputs             = 10
+full_connect_input      = True
 
 # node response options
 response_init_mean      = 1.0
