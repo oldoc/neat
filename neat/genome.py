@@ -231,10 +231,6 @@ class DefaultGenome(object):
                         sep='\n', file=sys.stderr);
                 self.connect_fs_neat_nohidden(config)
         elif 'full' in config.initial_connection:
-        """
-
-        # TODO: add layer to following functions
-        if 'full' in config.initial_connection:
             if config.initial_connection == 'full_nodirect':
                 self.connect_full_nodirect(config)
             elif config.initial_connection == 'full_direct':
@@ -262,6 +258,13 @@ class DefaultGenome(object):
                             config.connection_fraction),
                         sep='\n', file=sys.stderr);
                 self.connect_partial_nodirect(config)
+        """
+        if config.initial_connection == 'full':
+            self.connect_full(config)
+        elif config.initial_connection == 'partial':
+            self.connect_partial(config)
+        else:
+            print("Only full and partial connection allowed in CNN!")
 
     def configure_crossover(self, genome1, genome2, config):
         """ Configure a new genome by crossover from two parent genomes. """
@@ -560,6 +563,36 @@ class DefaultGenome(object):
 
         return connections
 
+    def compute_full_connections_with_layer(self, config):
+        """
+        Compute connections for a fully-connected cnn genome--each node in one
+        layer connected to all nodes in the next layer
+        """
+        connections = []
+
+        for node in self.layer[0][1]:
+            for input_id in config.input_keys:
+                connections.append((input_id, node))
+
+        for i in range(len(self.layer) - 1):
+             for node1 in self.layer[i][1]:
+                    for node2 in self.layer[i+1][1]:
+                        connections.append((node1, node2))
+
+        # For recurrent genomes, include node self-connections.
+        if not config.feed_forward:
+            for i in iterkeys(self.nodes):
+                connections.append((i, i))
+
+        return connections
+
+    def connect_full(self, config):
+        """
+        Create a fully-connected cnn genome
+        """
+        for node1, node2 in self.compute_full_connections_with_layer(config):
+            connection = self.create_connection(config, node1, node2)
+            self.connections[connection.key] = connection
 
     def connect_full_nodirect(self, config):
         """
@@ -573,6 +606,18 @@ class DefaultGenome(object):
     def connect_full_direct(self, config):
         """ Create a fully-connected genome, including direct input-output connections. """
         for input_id, output_id in self.compute_full_connections(config, True):
+            connection = self.create_connection(config, input_id, output_id)
+            self.connections[connection.key] = connection
+
+    def connect_partial(self, config):
+        """
+        Create a partially-connected genome,
+        with (unless no hidden nodes) no direct input-output connections."""
+        assert 0 <= config.connection_fraction <= 1
+        all_connections = self.compute_full_connections_with_layer(config)
+        shuffle(all_connections)
+        num_to_add = int(round(len(all_connections) * config.connection_fraction))
+        for input_id, output_id in all_connections[:num_to_add]:
             connection = self.create_connection(config, input_id, output_id)
             self.connections[connection.key] = connection
 
