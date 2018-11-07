@@ -512,6 +512,9 @@ class DefaultGenome(object):
         for key in connections_to_delete:
             del self.connections[key]
 
+        i = self.nodes[del_key].layer
+        self.layer[self.nodes[del_key].layer][1].remove(del_key)
+
         del self.nodes[del_key]
 
         return del_key
