@@ -27,8 +27,8 @@ eval_image = train_images[:eval_len]
 eval_labels = train_labels[:eval_len]
 
 # for layer design
-#train_images = train_images[:,:5]
-#test_images = test_images[:, :5]
+train_images = train_images[:,:5]
+test_images = test_images[:, :5]
 
 # opt for MNIST
 def static():
@@ -82,7 +82,7 @@ def hit(label, input, net):
         return False
 
 def eval_genomes(genomes, config):
-    batch_size = 5
+    batch_size = 20
     # start = int(random() * (train_images_sum - batch_size))
     start = 0
     for genome_id, genome in genomes:

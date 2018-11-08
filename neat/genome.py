@@ -43,6 +43,7 @@ class DefaultGenomeConfig(object):
                         ConfigParameter('initial_connection', str, 'unconnected'),
                         ConfigParameter('num_layer', int),
                         ConfigParameter('num_cnn_layer', int),
+                        ConfigParameter('kernal_size', int),
                         ConfigParameter('full_connect_input', bool)]
 
         # Gather configuration data from the gene classes.

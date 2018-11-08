@@ -1,7 +1,7 @@
 """Handles node and connection genes."""
 import warnings
 from random import random
-from neat.attributes import FloatAttribute, BoolAttribute, StringAttribute
+from neat.attributes import FloatAttribute, BoolAttribute, StringAttribute, ListAttribute
 
 # TODO: There is probably a lot of room for simplification of these classes using metaprogramming.
 # TODO: Evaluate using __slots__ for performance/memory usage improvement.
@@ -73,20 +73,33 @@ class BaseGene(object):
         # Note: we use "a if random() > 0.5 else b" instead of choice((a, b))
         # here because `choice` is substantially slower.
         for a in self._gene_attributes:
-            if random() > 0.5:
-                setattr(new_gene, a.name, getattr(self, a.name))
+            if random() < 0.5:
+                if (a.name == 'kernal'):
+                    new_gene.kernal = self.kernal.copy()
+                else:
+                    setattr(new_gene, a.name, getattr(self, a.name))
             else:
-                setattr(new_gene, a.name, getattr(gene2, a.name))
+                if (a.name == 'kernal'):
+                    new_gene.kernal = gene2.kernal.copy()
+                else:
+                    setattr(new_gene, a.name, getattr(gene2, a.name))
 
 # @@@@@@@@@@ andrew begin
 
-            if (random() > 0.7) and ((a.name == 'weight') or (a.name == 'bias')):
-                lamda = random()
-                tmpa = getattr(self, a.name)
-                tmpb = getattr(gene2, a.name)
-                tmp = tmpa * lamda + tmpb * (1 - lamda)
-                setattr(new_gene, a.name, tmp)
-
+            if (random() < 0.2):
+                if ((a.name == 'weight') or (a.name == 'bias')):
+                    lamda = random()
+                    tmpa = getattr(self, a.name)
+                    tmpb = getattr(gene2, a.name)
+                    tmp = tmpa * lamda + tmpb * (1 - lamda)
+                    setattr(new_gene, a.name, tmp)
+                elif (a.name == 'kernal'):
+                    for i in range(len(new_gene.kernal)):
+                        lamda = random()
+                        tmpa = self.kernal[i]
+                        tmpb = gene2.kernal[i]
+                        tmp = tmpa * lamda + tmpb * (1 - lamda)
+                        new_gene.kernal[i] = tmp
 # @@@@@@@@@@ andrew end
 
         return new_gene
@@ -99,7 +112,8 @@ class DefaultNodeGene(BaseGene):
     _gene_attributes = [FloatAttribute('bias'),
                         FloatAttribute('response'),
                         StringAttribute('activation', options='sigmoid'),
-                        StringAttribute('aggregation', options='sum')]
+                        StringAttribute('aggregation', options='sum'),
+                        ListAttribute('kernal')]
 
     def __init__(self, key, layer):
         assert isinstance(key, int), "DefaultNodeGene key must be an int, not {!r}".format(key)
