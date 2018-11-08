@@ -43,6 +43,7 @@ class DefaultGenomeConfig(object):
                         ConfigParameter('initial_connection', str, 'unconnected'),
                         ConfigParameter('num_layer', int),
                         ConfigParameter('num_cnn_layer', int),
+                        ConfigParameter('num_first_fc_layer_node', int),
                         ConfigParameter('kernal_size', int),
                         ConfigParameter('full_connect_input', bool)]
 
@@ -203,14 +204,29 @@ class DefaultGenome(object):
                 hidden_node_key.add(node_key)
 
         # Assign nodes to layers, make sure every layer has at least one node
-        for i in range(config.num_layer - 1):
-            node_key = hidden_node_key.pop()
-            self.layer[i][1].add(node_key)
-            self.nodes[node_key].layer = i
+        if (len(hidden_node_key) >= config.num_layer - 1):
+            for i in range(config.num_layer - 1):
+                node_key = hidden_node_key.pop()
+                self.layer[i][1].add(node_key)
+                self.nodes[node_key].layer = i
+        else:
+            raise RuntimeError("Too less nodes.")
+
+        # Assign nodes to the first fc layer.
+        # (The first fc layer already has one node, so add num_first_fc_layer_node - 1 nodes.
+        if (config.num_first_fc_layer_node > 0) and (len(hidden_node_key) >= config.num_first_fc_layer_node - 1):
+            for i in range(config.num_first_fc_layer_node - 1):
+                node_key = hidden_node_key.pop()
+                self.layer[config.num_cnn_layer][1].add(node_key)
+                self.nodes[node_key].layer = config.num_cnn_layer
+        else:
+            raise RuntimeError("Too less nodes.")
 
         # Assign the left nodes to layers randomly
         while hidden_node_key:
             layer_nums = randint(0, config.num_layer - 2)
+            if (layer_nums == config.num_cnn_layer): # Do not add node to the first fc layer.
+                continue
             node_key = hidden_node_key.pop()
             self.layer[layer_nums][1].add(node_key)
             self.nodes[node_key].layer = layer_nums
@@ -355,8 +371,11 @@ class DefaultGenome(object):
     # Note: The node cannot be added to the last layer!
     def mutate_add_node(self, config):
 
-        # Choose the layer to add node (not the last layer)
+        # Choose the layer to add node (not the last layer and the first fc layer)
         layer_num = randint(0, config.num_layer - 2)
+        while (layer_num == config.num_cnn_layer):
+            layer_num = randint(0, config.num_layer - 2)
+
         new_node_id = config.get_new_node_key(self.nodes)
         ng = self.create_node(config, new_node_id, layer_num)
 
@@ -505,6 +524,10 @@ class DefaultGenome(object):
 
         del_key = choice(available_nodes)
 
+        # Cannot delete node in the first fc layer
+        if self.nodes[del_key].layer == config.num_cnn_layer:
+            return -1
+
         connections_to_delete = set()
         for k, v in iteritems(self.connections):
             if del_key in v.key:
@@ -588,11 +611,20 @@ class DefaultGenome(object):
         s = "Key: {0}\nFitness: {1}\nNodes:".format(self.key, self.fitness)
         for k, ng in iteritems(self.nodes):
             s += "\n\t{0} {1!s}".format(k, ng)
+
         s += "\nConnections:"
         connections = list(self.connections.values())
         connections.sort()
         for c in connections:
             s += "\n\t" + str(c)
+
+        s += "\nLayers:"
+        for i in range(len(self.layer)):
+            s += "\n\t" + self.layer[i][0] + ": "
+            l = list(self.layer[i][1])
+            l.sort()
+            for node in l:
+                s += " {0}".format(node)
         return s
 
     @staticmethod

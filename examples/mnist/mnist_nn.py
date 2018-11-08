@@ -138,10 +138,10 @@ for i in range(0, 10):
 # test on test dataset
 winner_net = neat.nn.FeedForwardNetwork.create(winner, config)
 hitCount = 0
-for i in range(0, 1000): #len(test_labels)
+for i in range(0, len(test_labels) // 10): #len(test_labels)
     if (hit(test_labels[i], test_images[i], winner_net)):
         hitCount += 1
-print("hit {0} of {1}".format(hitCount, len(test_labels)))
+print("hit %d of %d"%(hitCount, len(test_labels) / 10))
 
 """
 # Show output of the most fit genome against training data.
