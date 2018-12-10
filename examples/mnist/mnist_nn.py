@@ -1,99 +1,88 @@
-import keras
-keras.__version__
-
-from keras.datasets import mnist
-from keras import models
-from keras import layers
-from keras.utils import to_categorical
+import sys
+#print(sys.path)
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import numpy as np
+import tensorflow as tf
+mnist = tf.keras.datasets.mnist
+
+# from keras.datasets import mnist
+# from keras import models
+# from keras import layers
+# from keras.utils import to_categorical
+# import numpy as np
 from random import random
 
 # from __future__ import print_function
 import neat
-import visualize
+# import visualize
 
-(train_images, train_labels), (test_images, test_labels) = mnist.load_data()
+# ---------------------
+import torch
+import torchvision
+import torchvision.transforms as transforms
+from torch.autograd import Variable
+import evaluate_torch
+# ---------------------
 
-train_images_sum = 60000
-train_images = train_images.reshape((train_images_sum, 28 * 28))
-train_images = train_images.astype('float32') / 255
 
-test_images_sum = 10000
-test_images = test_images.reshape((test_images_sum, 28 * 28))
-test_images = test_images.astype('float32') / 255
+transform = transforms.Compose(
+    [transforms.ToTensor(),
+     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-eval_len = 10
-eval_image = train_images[:eval_len]
-eval_labels = train_labels[:eval_len]
+trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
+                                        download=True, transform=transform)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=1,
+                                          shuffle=True, num_workers=0)
 
-# for layer design
-train_images = train_images[:,:5]
-test_images = test_images[:, :5]
+testset = torchvision.datasets.CIFAR10(root='./data', train=False,
+                                       download=True, transform=transform)
+testloader = torch.utils.data.DataLoader(testset, batch_size=1,
+                                         shuffle=False, num_workers=0)
 
-# opt for MNIST
-def static():
-    list1 = [[0 for col in range(2)] for row in range(784)]
-
-    for i in range(0, 784):
-        list1[i][0] = i
-
-    count = dict(list1)
-
-    for i in range(0, 60000):
-        print(i)
-        for j in range(0, 784):
-            if (train_images[i, j] > 0):
-                count[j] += 1;
-#    count = sorted(count.items(),key = lambda count:count[1],reverse = True)
-
-    res = open("mnist_count.txt", "w")
-    for j in count:
-        res.write("{0}, {1}\n".format(j[0],j[1]))
-    res.close()
-
-#static()
-
-"""
-network = models.Sequential()
-network.add(layers.Dense(512, activation='relu', input_shape=(28 * 28,)))
-network.add(layers.Dense(10, activation='softmax'))
-
-network.compile(optimizer='rmsprop',
-                loss='categorical_crossentropy',
-                metrics=['accuracy'])
-
-train_labels = to_categorical(train_labels)
-test_labels = to_categorical(test_labels)
-
-network.fit(train_images, train_labels, epochs=5, batch_size=128)
-
-test_loss, test_acc = network.evaluate(test_images, test_labels)
-
-print('test_acc:', test_acc)
-
-"""
-
-def hit(label, input, net):
-    output = net.activate(input)
-    result = output.index(max(output))
-    if (result == label):
-        return True
-    else:
-        return False
+classes = ('plane', 'car', 'bird', 'cat',
+           'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
 def eval_genomes(genomes, config):
-    batch_size = 20
-    # start = int(random() * (train_images_sum - batch_size))
-    start = 0
-    for genome_id, genome in genomes:
-        hitCount = 0
 
-        for i in range(start, start + batch_size):
-            mnist_inputs = train_images[i]
-            net = neat.nn.FeedForwardNetwork.create(genome, config)
-            if (hit(train_labels[i], mnist_inputs, net)):
-                hitCount += 1
-        genome.fitness = hitCount / batch_size
+    # start = int(random() * (train_images_sum - batch_size))
+    #start = 0
+    for genome_id, genome in genomes:
+        #hitCount = 0
+        # visualize.draw_net(config, genome, True, node_names=node_names)
+        #for i in range(start, start + batch_size):
+        #
+
+        batch_size = 500
+        hit_count = 0
+        start = int(random() * (len(trainloader) - batch_size))
+        #batch = trainloader(start::batch_size)
+        i = 0
+        for num, data in enumerate(trainloader, start):
+            i += 1
+            # 得到输入数据
+            inputs, labels = data
+
+            # 包装数据
+            inputs, labels = Variable(inputs), Variable(labels)
+            try:
+
+                net = evaluate_torch.Net(config, genome)
+                outputs = net.forward(inputs)
+                #print(net)
+
+                predicted = torch.max(outputs.data, 0)[1]
+                if (predicted == labels):
+                    hit_count += 1
+
+            except Exception as e:
+                print(e)
+                genome.fitness = 0
+            if (i == batch_size - 1):
+                break
+
+        genome.fitness = hit_count / batch_size
+        print(genome.fitness)
 
 # Load configuration.
 config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
@@ -158,4 +147,4 @@ node_names = {# -28: '-28', -27: '-27', -26: '-26', -25: '-25', -24: '-24', -23:
               -5: '-05', -4: '-04', -3: '-03', -2: '-02', -1: '-01', 0: '00', 1: '01', 2: '02',
               3: '03', 4: '04', 5: '05', 6: '06', 7: '07', 8: '08', 9: '09'}
 
-visualize.draw_net(config, winner, True, node_names=node_names)
+# visualize.draw_net(config, winner, True, node_names=node_names)
