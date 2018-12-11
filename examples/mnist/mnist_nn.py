@@ -1,30 +1,17 @@
-import sys
-#print(sys.path)
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-import numpy as np
-import tensorflow as tf
-mnist = tf.keras.datasets.mnist
 
-# from keras.datasets import mnist
-# from keras import models
-# from keras import layers
-# from keras.utils import to_categorical
 # import numpy as np
 from random import random
 
 # from __future__ import print_function
 import neat
-# import visualize
 
-# ---------------------
 import torch
 import torchvision
 import torchvision.transforms as transforms
 from torch.autograd import Variable
 import evaluate_torch
-# ---------------------
-
 
 transform = transforms.Compose(
     [transforms.ToTensor(),
@@ -45,18 +32,14 @@ classes = ('plane', 'car', 'bird', 'cat',
 
 def eval_genomes(genomes, config):
 
-    # start = int(random() * (train_images_sum - batch_size))
-    #start = 0
+    j = 0
     for genome_id, genome in genomes:
-        #hitCount = 0
-        # visualize.draw_net(config, genome, True, node_names=node_names)
-        #for i in range(start, start + batch_size):
-        #
+        j += 1
 
-        batch_size = 500
+        batch_size = 3000
         hit_count = 0
         start = int(random() * (len(trainloader) - batch_size))
-        #batch = trainloader(start::batch_size)
+
         i = 0
         for num, data in enumerate(trainloader, start):
             i += 1
@@ -82,7 +65,7 @@ def eval_genomes(genomes, config):
                 break
 
         genome.fitness = hit_count / batch_size
-        print(genome.fitness)
+        print('{0}: {1:3.3f}'.format(j,genome.fitness))
 
 # Load configuration.
 config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
@@ -91,7 +74,9 @@ config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
 
 # reset result file
 res = open("result.txt", "w")
+best = open("best.txt", "w")
 res.close()
+best.close()
 
 # Create the population, which is the top-level object for a NEAT run.
 p = neat.Population(config)
@@ -110,36 +95,20 @@ winner = p.run(eval_genomes)
 # Display the winning genome.
 print('\nBest genome:\n{!s}'.format(winner))
 
-"""
-# print results on evaluate set
-winner_net = neat.nn.FeedForwardNetwork.create(winner, config)
-for i in range(0, 10):
-    output = winner_net.activate(eval_image[i])
-    fitness = 10;
-    mnist_outputs = [0.0] * 10
-    mnist_outputs[eval_labels[i]] = 1.0
-    for j in range(0, 10):
-        fitness -= (output[j] - mnist_outputs[j]) ** 2
-    print(eval_labels[i], fitness)
-    print("got {!r}".format(output))
-"""
+correct = 0
+total = 0
+net = evaluate_torch.Net(config, winner)
 
-# test on test dataset
-winner_net = neat.nn.FeedForwardNetwork.create(winner, config)
-hitCount = 0
-for i in range(0, len(test_labels) // 10): #len(test_labels)
-    if (hit(test_labels[i], test_images[i], winner_net)):
-        hitCount += 1
-print("hit %d of %d"%(hitCount, len(test_labels) / 10))
+for data in testloader:
+    images, labels = data
+    outputs = net.forward(images)
+    predicted = torch.max(outputs.data, 0)[1]
+    if (predicted == labels):
+        correct += 1
 
-"""
-# Show output of the most fit genome against training data.
-print('\nOutput:')
-winner_net = neat.nn.FeedForwardNetwork.create(winner, config)
-for xi, xo in zip(xor_inputs, xor_outputs):
-    output = winner_net.activate(xi)
-    print("  input {!r}, expected output {!r}, got {!r}".format(xi, xo, output))
-"""
+print("hit %d of %d"%(correct, len(testset)))
+
+#TODO: wirte model to pytorch files
 
 node_names = {# -28: '-28', -27: '-27', -26: '-26', -25: '-25', -24: '-24', -23: '-23', -22: '-22', -21: '-21',
               # -20: '-20', -19: '-19', -18: '-18', -17: '-17', -16: '-16', -15: '-15', -14: '-14', -13: '-13',

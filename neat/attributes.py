@@ -62,7 +62,7 @@ class FloatAttribute(BaseAttribute):
             return uniform(min_value, max_value)
 
         raise RuntimeError("Unknown init_type {!r} for {!s}".format(getattr(config,
-                                                                            self.init_type_name),
+                                                                    self.init_type_name),
                                                                     self.init_type_name))
 
     def mutate_value(self, value, config):

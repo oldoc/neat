@@ -528,6 +528,10 @@ class DefaultGenome(object):
         if self.nodes[del_key].layer == config.num_cnn_layer:
             return -1
 
+        # If there is only one node
+        if len(self.layer[self.nodes[del_key].layer][1]) <= 1:
+            return -1
+
         connections_to_delete = set()
         for k, v in iteritems(self.connections):
             if del_key in v.key:
@@ -546,6 +550,7 @@ class DefaultGenome(object):
     def mutate_delete_connection(self):
         if self.connections:
             key = choice(list(self.connections.keys()))
+            #TODO: add judgement to avoid del the last connection between two layers
             del self.connections[key]
 
     def distance(self, other, config):
