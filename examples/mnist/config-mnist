@@ -8,9 +8,9 @@ reset_on_extinction   = False
 
 [DefaultGenome]
 # node activation options
-activation_default      = relu
+activation_default      = sigmod
 activation_mutate_rate  = 0.0
-activation_options      = relu
+activation_options      = sigmod
 
 # node aggregation options
 aggregation_default     = sum
@@ -19,7 +19,7 @@ aggregation_options     = sum
 
 # node bias options
 bias_init_mean          = 0.0
-bias_init_stdev         = 0.05
+bias_init_stdev         = 0.5
 bias_max_value          = 5.0
 bias_min_value          = -5.0
 bias_mutate_power       = 0.005
@@ -65,13 +65,13 @@ weight_init_mean        = 0.0
 weight_init_stdev       = 0.5
 weight_max_value        = 5.0
 weight_min_value        = -5.0
-weight_mutate_power     = 0.05
-weight_mutate_rate      = 0.5
+weight_mutate_power     = 0.005
+weight_mutate_rate      = 0.05
 weight_replace_rate     = 0.01
 
 # cnn kernal options
 kernal_init_mean        = 0.0
-kernal_init_stdev       = 0.05
+kernal_init_stdev       = 0.5
 kernal_max_value        = 5.0
 kernal_min_value        = -5.0
 kernal_mutate_power     = 0.005

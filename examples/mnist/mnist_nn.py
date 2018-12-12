@@ -73,7 +73,7 @@ config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
                      'config-mnist')
 
 # reset result file
-res = open("result.txt", "w")
+res = open("result.csv", "w")
 best = open("best.txt", "w")
 res.close()
 best.close()
