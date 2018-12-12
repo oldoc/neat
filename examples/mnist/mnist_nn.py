@@ -40,7 +40,7 @@ def eval_genomes(genomes, config):
 
         evaluate_batch_size = 1000
         hit_count = 0
-        start = int(random() * (len(trainloader) - evaluate_batch_size))
+        start = int(random() * (len(trainloader) - evaluate_batch_size * torch_batch_size))
 
         i = 0
         for num, data in enumerate(trainloader, start):
