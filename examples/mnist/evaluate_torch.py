@@ -41,7 +41,7 @@ class Net(nn.Module):
             x = F.relu(x)
             x = F.max_pool2d(x, 2)
 
-        x = x.view(self.num_flat_features)
+        x = x.view(-1, self.num_flat_features)
 
         for i in range(self.num_cnn_layer, self.num_layer - 1):
             x = F.relu(l[i + self.num_cnn_layer](x))

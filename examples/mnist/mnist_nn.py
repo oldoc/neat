@@ -17,14 +17,16 @@ transform = transforms.Compose(
     [transforms.ToTensor(),
      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
+torch_batch_size = 4
+
 trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
                                         download=True, transform=transform)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=1,
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=torch_batch_size,
                                           shuffle=True, num_workers=0)
 
 testset = torchvision.datasets.CIFAR10(root='./data', train=False,
                                        download=True, transform=transform)
-testloader = torch.utils.data.DataLoader(testset, batch_size=1,
+testloader = torch.utils.data.DataLoader(testset, batch_size=torch_batch_size,
                                          shuffle=False, num_workers=0)
 
 classes = ('plane', 'car', 'bird', 'cat',
@@ -36,9 +38,9 @@ def eval_genomes(genomes, config):
     for genome_id, genome in genomes:
         j += 1
 
-        batch_size = 3000
+        evaluate_batch_size = 1000
         hit_count = 0
-        start = int(random() * (len(trainloader) - batch_size))
+        start = int(random() * (len(trainloader) - evaluate_batch_size))
 
         i = 0
         for num, data in enumerate(trainloader, start):
@@ -54,17 +56,17 @@ def eval_genomes(genomes, config):
                 outputs = net.forward(inputs)
                 #print(net)
 
-                predicted = torch.max(outputs.data, 0)[1]
-                if (predicted == labels):
-                    hit_count += 1
+                _, predicted = torch.max(outputs.data, 1)
+                hit_count += (predicted == labels).sum()
 
             except Exception as e:
                 print(e)
                 genome.fitness = 0
-            if (i == batch_size - 1):
+            if (i == evaluate_batch_size - 1):
                 break
-
-        genome.fitness = hit_count / batch_size
+        print(hit_count)
+        print((evaluate_batch_size * torch_batch_size))
+        genome.fitness = hit_count.item() / (evaluate_batch_size * torch_batch_size)
         print('{0}: {1:3.3f}'.format(j,genome.fitness))
 
 # Load configuration.
