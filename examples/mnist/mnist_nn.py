@@ -64,8 +64,7 @@ def eval_genomes(genomes, config):
                 genome.fitness = 0
             if (i == evaluate_batch_size - 1):
                 break
-        print(hit_count)
-        print((evaluate_batch_size * torch_batch_size))
+
         genome.fitness = hit_count.item() / (evaluate_batch_size * torch_batch_size)
         print('{0}: {1:3.3f}'.format(j,genome.fitness))
 
