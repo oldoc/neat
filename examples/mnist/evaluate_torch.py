@@ -144,4 +144,48 @@ class Net(nn.Module):
                 weight_num = nodes[in_node][1] * self.num_first_fc_layer_node + nodes[out_node][1]
                 (layer[layer_num].weight.data[weight_tensor_num])[weight_num] = \
                     torch.FloatTensor([genome.connections[(in_node, out_node)].weight])
+"""
+   def write_back_parameters(self, genome: neat.genome.DefaultGenome):
 
+        layer = list(self.children())#make sure change layer can affect parameters in cnn
+
+        nodes = {}
+
+        #TODO: check if it is correct
+        #add every layers to nodes dict
+        for i in range(self.num_layer):
+            l = list(genome.layer[i][1])
+
+            for j in range(len(l)):
+                #write back conv kernel and bias
+                if i < self.num_cnn_layer:
+                    a = np.array(layer[i * 2 + 1].weight.data[j])
+                    genome.nodes[l[j]].kernal = a.reshape(9)
+                    genome.nodes[l[j]].bias = layer[i * 2 + 1].bias.data[j].item()
+                else:
+                    genome.nodes[l[j]].bias = layer[i + self.num_cnn_layer].bias.data[j].item()
+
+        #TODO: add write back
+        for in_node, out_node in genome.connections:
+
+            c = nodes[out_node][0] #layer number
+            if c < self.num_cnn_layer: #cnn layer
+                layer_num = 2 *c
+                weight_tensor_num = nodes[out_node][1]
+                weight_num = nodes[in_node][1]
+                (layer[layer_num].weight.data[weight_tensor_num])[weight_num] = \
+                    torch.FloatTensor([genome.connections[(in_node, out_node)].weight])
+            elif c != self.num_cnn_layer:
+                layer_num = self.num_cnn_layer + c
+                weight_tensor_num = nodes[out_node][1]
+                weight_num = nodes[in_node][1]
+                (layer[layer_num].weight.data[weight_tensor_num])[weight_num] = \
+                    torch.FloatTensor([genome.connections[(in_node, out_node)].weight])
+            else:
+                #print(len(layer[6].weight[0]))
+                layer_num = self.num_cnn_layer + c
+                weight_tensor_num = nodes[out_node][1]
+                weight_num = nodes[in_node][1] * self.num_first_fc_layer_node + nodes[out_node][1]
+                (layer[layer_num].weight.data[weight_tensor_num])[weight_num] = \
+                    torch.FloatTensor([genome.connections[(in_node, out_node)].weight])
+"""
