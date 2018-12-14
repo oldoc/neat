@@ -2,7 +2,7 @@
 """
 Created on 2018-12-04 10:23:06
 
-@author: Xu Kaiqiang
+@author: AN Zhulin
 """
 import torch
 import torch.nn as nn
@@ -100,7 +100,6 @@ class Net(nn.Module):
             nodes.update({i: position})
             order += 1
 
-
         #add every layers to nodes dict
         for i in range(self.num_layer):
             l = list(genome.layer[i][1])
@@ -144,12 +143,19 @@ class Net(nn.Module):
                 weight_num = nodes[in_node][1] * self.num_first_fc_layer_node + nodes[out_node][1]
                 (layer[layer_num].weight.data[weight_tensor_num])[weight_num] = \
                     torch.FloatTensor([genome.connections[(in_node, out_node)].weight])
-"""
-   def write_back_parameters(self, genome: neat.genome.DefaultGenome):
+
+    def write_back_parameters(self, genome: neat.genome.DefaultGenome):
 
         layer = list(self.children())#make sure change layer can affect parameters in cnn
 
         nodes = {}
+
+        #add the input node to nodes dict
+        order = 0
+        for i in range(-self.num_inputs, 0):
+            position = [-1, order]   #-1 means input node
+            nodes.update({i: position})
+            order += 1
 
         #TODO: check if it is correct
         #add every layers to nodes dict
@@ -157,6 +163,10 @@ class Net(nn.Module):
             l = list(genome.layer[i][1])
 
             for j in range(len(l)):
+                # add node (id, [layer, order in layer]
+                position = [i, j]
+                nodes.update({l[j]: position})
+                
                 #write back conv kernel and bias
                 if i < self.num_cnn_layer:
                     a = np.array(layer[i * 2 + 1].weight.data[j])
@@ -173,19 +183,18 @@ class Net(nn.Module):
                 layer_num = 2 *c
                 weight_tensor_num = nodes[out_node][1]
                 weight_num = nodes[in_node][1]
-                (layer[layer_num].weight.data[weight_tensor_num])[weight_num] = \
-                    torch.FloatTensor([genome.connections[(in_node, out_node)].weight])
+                genome.connections[(in_node, out_node)].weight = \
+                    (layer[layer_num].weight.data[weight_tensor_num])[weight_num].item()
             elif c != self.num_cnn_layer:
                 layer_num = self.num_cnn_layer + c
                 weight_tensor_num = nodes[out_node][1]
                 weight_num = nodes[in_node][1]
-                (layer[layer_num].weight.data[weight_tensor_num])[weight_num] = \
-                    torch.FloatTensor([genome.connections[(in_node, out_node)].weight])
+                genome.connections[(in_node, out_node)].weight = \
+                    (layer[layer_num].weight.data[weight_tensor_num])[weight_num].item()
             else:
                 #print(len(layer[6].weight[0]))
                 layer_num = self.num_cnn_layer + c
                 weight_tensor_num = nodes[out_node][1]
                 weight_num = nodes[in_node][1] * self.num_first_fc_layer_node + nodes[out_node][1]
-                (layer[layer_num].weight.data[weight_tensor_num])[weight_num] = \
-                    torch.FloatTensor([genome.connections[(in_node, out_node)].weight])
-"""
+                genome.connections[(in_node, out_node)].weight = \
+                    (layer[layer_num].weight.data[weight_tensor_num])[weight_num].item()

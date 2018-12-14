@@ -13,6 +13,7 @@ import torchvision.transforms as transforms
 from torch.autograd import Variable
 import torch.nn as nn
 import torch.optim as optim
+import numpy as np
 
 import evaluate_torch
 
@@ -47,8 +48,12 @@ def eval_genomes(genomes, config):
         criterion = nn.CrossEntropyLoss()  # use a Classification Cross-Entropy loss
         optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
+        delta = 0.1
+        losses_len = 100
+        losses = np.array([0.0] * losses_len)
+
         #train the network
-        for epoch in range(10):  # loop over the dataset multiple times
+        for epoch in range(1):  # loop over the dataset multiple times
 
             running_loss = 0.0
             for i, data in enumerate(trainloader, 0):
@@ -67,8 +72,19 @@ def eval_genomes(genomes, config):
                 loss.backward()
                 optimizer.step()
 
+                # record the losses
+                running_loss += loss.data.item()
+                """
+                losses[i % losses_len] = loss.data.item()
+
+                # if loss do not change apperantly, then break
+                if (i % losses_len == losses_len - 1):
+                    a = np.std(losses)
+                    print(a)
+                    if (a < delta):
+                        break;
+                """
                 # print statistics
-                running_loss += loss.data[0]
                 if i % 2000 == 1999:  # print every 2000 mini-batches
                     print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 2000))
                     running_loss = 0.0
@@ -99,7 +115,8 @@ def eval_genomes(genomes, config):
                 genome.fitness = 0
             if (i == evaluate_batch_size - 1):
                 break
-
+                
+        net.write_back_parameters(genome)
         genome.fitness = hit_count.item() / (evaluate_batch_size * torch_batch_size)
         print('{0}: {1:3.3f}'.format(j,genome.fitness))
 
