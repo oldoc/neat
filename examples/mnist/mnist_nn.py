@@ -91,7 +91,7 @@ def eval_genomes(genomes, config):
         print('Finished Training')
 
         #evaluate the fitness
-        evaluate_batch_size = 100
+        evaluate_batch_size = 1000
         hit_count = 0
         start = int(random() * (len(trainloader) - evaluate_batch_size * torch_batch_size))
 
