@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 # import numpy as np
 from random import random
@@ -38,30 +38,39 @@ classes = ('plane', 'car', 'bird', 'cat',
 
 def eval_genomes(genomes, config):
 
+    print(torch.cuda.is_available())
+
     j = 0
     for genome_id, genome in genomes:
         j += 1
 
         #setup the network
         net = evaluate_torch.Net(config, genome)
+        net.cuda()
 
         criterion = nn.CrossEntropyLoss()  # use a Classification Cross-Entropy loss
-        optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+        optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
 
-        delta = 0.1
+        delta = 0.001
         losses_len = 100
         losses = np.array([0.0] * losses_len)
 
         #train the network
-        for epoch in range(1):  # loop over the dataset multiple times
-
+        epoch = 0
+        training = True
+        train_epoch = 10
+        while training and epoch < train_epoch:  # loop over the dataset multiple times
+        #for epoch in range(10):
+            epoch += 1
             running_loss = 0.0
+            last_running_loss = 0.0
             for i, data in enumerate(trainloader, 0):
                 # get the inputs
                 inputs, labels = data
 
                 # wrap them in Variable
-                inputs, labels = Variable(inputs), Variable(labels)
+                #inputs, labels = Variable(inputs), Variable(labels)
+                inputs, labels = Variable(inputs).cuda(), Variable(labels).cuda()
 
                 # zero the parameter gradients
                 optimizer.zero_grad()
@@ -80,13 +89,23 @@ def eval_genomes(genomes, config):
                 # if loss do not change apperantly, then break
                 if (i % losses_len == losses_len - 1):
                     a = np.std(losses)
-                    print(a)
+                    #print(a)
+                    #print(losses)
                     if (a < delta):
+                        print("Stopped trainning")
+                        training = False
                         break;
                 """
                 # print statistics
                 if i % 2000 == 1999:  # print every 2000 mini-batches
-                    print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 2000))
+                    print('[%d, %5d] loss: %.3f' % (epoch, i + 1, running_loss / 2000))
+                    if ((abs(last_running_loss - running_loss)/2000 < delta) or
+                            (last_running_loss != 0) and (running_loss > last_running_loss)):
+                        training = False
+                        print("Stopped trainning")
+                        break;
+                    #print(abs(last_running_loss - running_loss))
+                    last_running_loss = running_loss
                     running_loss = 0.0
         print('Finished Training')
 
@@ -102,7 +121,7 @@ def eval_genomes(genomes, config):
             inputs, labels = data
 
             # 包装数据
-            inputs, labels = Variable(inputs), Variable(labels)
+            inputs, labels = Variable(inputs).cuda(), Variable(labels).cuda()
             try:
 
                 outputs = net.forward(inputs)

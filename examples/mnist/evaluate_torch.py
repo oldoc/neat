@@ -38,13 +38,13 @@ class Net(nn.Module):
         for i in range(self.num_cnn_layer):
             x = l[2 * i](x)
             x = l[2*i+1](x)
-            x = F.relu(x)
+            x = F.sigmoid(x)
             x = F.max_pool2d(x, 2)
 
         x = x.view(-1, self.num_flat_features)
 
         for i in range(self.num_cnn_layer, self.num_layer - 1):
-            x = F.relu(l[i + self.num_cnn_layer](x))
+            x = F.sigmoid(l[i + self.num_cnn_layer](x))
 
         x = l[-1](x)
 
@@ -169,7 +169,7 @@ class Net(nn.Module):
                 
                 #write back conv kernel and bias
                 if i < self.num_cnn_layer:
-                    a = np.array(layer[i * 2 + 1].weight.data[j])
+                    a = np.array(layer[i * 2 + 1].weight.data[j].cpu())
                     genome.nodes[l[j]].kernal = a.reshape(9)
                     genome.nodes[l[j]].bias = layer[i * 2 + 1].bias.data[j].item()
                 else:
