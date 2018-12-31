@@ -38,6 +38,7 @@ class Net(nn.Module):
         for i in range(self.num_cnn_layer):
             x = l[2 * i](x)
             x = l[2*i+1](x)
+            #x = F.batch_norm(x)
             x = F.sigmoid(x)
             x = F.max_pool2d(x, 2)
 
