@@ -21,7 +21,7 @@ transform = transforms.Compose(
     [transforms.ToTensor(),
      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-torch_batch_size = 40
+torch_batch_size = 128
 
 gpu = False
 
@@ -128,13 +128,15 @@ def eval_genomes(genomes, config):
 
         #train the network
         epoch = 0
+        running_loss = 0.0
+        last_running_loss = 0.0
         training = True
-        train_epoch = 10
+        train_epoch = 40
         while training and epoch < train_epoch:  # loop over the dataset multiple times
         #for epoch in range(10):
             epoch += 1
-            running_loss = 0.0
-            last_running_loss = 0.0
+
+            num_loss = 0
 
             for i, data in enumerate(trainloader, 0):
                 # get the inputs
@@ -157,18 +159,22 @@ def eval_genomes(genomes, config):
 
                 # record the losses
                 running_loss += loss.data.item()
+                num_loss += 1
 
                 # print statistics
-                if i % 200 == 199:  # print every 200 mini-batches
-                    print('[%d, %5d] loss: %.3f' % (epoch, i + 1, running_loss / 200))
-                    if ((abs(last_running_loss - running_loss)/200 < delta) or
-                            (last_running_loss != 0) and (running_loss > last_running_loss)):
-                        training = False
-                        print("Stopped trainning")
-                        break;
-                    #print(abs(last_running_loss - running_loss))
-                    last_running_loss = running_loss
-                    running_loss = 0.0
+                if i % 50 == 49:  # print every 200 mini-batches
+                    print('[%d, %5d] loss: %.3f' % (epoch, i + 1, running_loss / i))
+
+            print("Batch {0:d}, Average loss:{1:.5f}".format(epoch, running_loss / num_loss))
+
+            if ((abs(last_running_loss - running_loss)/num_loss < delta) or
+                (last_running_loss != 0) and (running_loss > last_running_loss)):
+                training = False
+                print("Stopped trainning")
+                break;
+                #print(abs(last_running_loss - running_loss))
+            last_running_loss = running_loss
+            running_loss = 0.0
         print('Finished Training')
 
         #evaluate the fitness
@@ -284,96 +290,3 @@ node_names = {# -28: '-28', -27: '-27', -26: '-26', -25: '-25', -24: '-24', -23:
 
 # visualize.draw_net(config, winner, True, node_names=node_names)
 
-
-# to delete:
-
-
-"""
-# evaluate the fitness
-
-hit_count = 0
-start = int(random() * (len(trainloader) - evaluate_batch_size * torch_batch_size))
-
-i = 0
-for num, data in enumerate(trainloader, start):
-    i += 1
-    # 得到输入数据
-    inputs, labels = data
-
-    # 包装数据
-    if gpu:
-        inputs, labels = Variable(inputs).cuda(), Variable(labels).cuda()
-    else:
-        inputs, labels = Variable(inputs), Variable(labels)
-
-    try:
-
-        outputs = net.forward(inputs)
-
-        _, predicted = torch.max(outputs.data, 1)
-        hit_count += (predicted == labels).sum()
-
-    except Exception as e:
-        print(e)
-        genome.fitness = 0
-    if (i == evaluate_batch_size - 1):
-        break
-"""
-"""
-     evaluate_batch_size = 0
-     start = 0 #int(random() * (len(trainloader) - evaluate_batch_size * torch_batch_size))
-
-     i = 0
-     total = 0
-     for num, data in enumerate(trainloader, start):
-         i += 1
-         total += torch_batch_size
-         # 得到输入数据
-         inputs, labels = data
-
-         # 包装数据
-         if gpu:
-             inputs, labels = Variable(inputs).cuda(), Variable(labels).cuda()
-         else:
-             inputs, labels = Variable(inputs), Variable(labels)
-
-         try:
-
-             outputs = net.forward(inputs)
-
-             _, predicted = torch.max(outputs.data, 1)
-             hit_count += (predicted == labels).sum()
-
-         except Exception as e:
-             print(e)
-             genome.fitness = 0
-         #if (i == evaluate_batch_size - 1):
-          #   break
-"""
-
-
-"""
-correct = 0
-total = 0
-
-for num, data in enumerate(testloader, 0):
-    total += torch_batch_size
-    # 得到输入数据
-    inputs, labels = data
-
-    # 包装数据
-    if gpu:
-        inputs, labels = Variable(inputs).cuda(), Variable(labels).cuda()
-    else:
-        inputs, labels = Variable(inputs), Variable(labels)
-
-    try:
-
-        outputs = net.forward(inputs)
-
-        _, predicted = torch.max(outputs.data, 1)
-        correct += (predicted == labels).sum()
-
-    except Exception as e:
-        print(e)
-"""
