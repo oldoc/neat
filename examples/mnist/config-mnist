@@ -2,7 +2,7 @@
 
 [NEAT]
 fitness_criterion     = max
-fitness_threshold     = 0.95
+fitness_threshold     = 0.97
 pop_size              = 16
 reset_on_extinction   = False
 
@@ -86,7 +86,7 @@ num_cnn_layer           = 3
 num_first_fc_layer_node = 16
 
 [DefaultSpeciesSet]
-compatibility_threshold = 3.9
+compatibility_threshold = 3.95
 
 [DefaultStagnation]
 species_fitness_func = max

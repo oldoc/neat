@@ -129,14 +129,13 @@ def eval_genomes(genomes, config):
         #train the network
         epoch = 0
         running_loss = 0.0
+        num_loss = 0
         last_running_loss = 0.0
         training = True
         train_epoch = 40
         while training and epoch < train_epoch:  # loop over the dataset multiple times
         #for epoch in range(10):
             epoch += 1
-
-            num_loss = 0
 
             for i, data in enumerate(trainloader, 0):
                 # get the inputs
@@ -163,18 +162,19 @@ def eval_genomes(genomes, config):
 
                 # print statistics
                 if i % 50 == 49:  # print every 200 mini-batches
-                    print('[%d, %5d] loss: %.3f' % (epoch, i + 1, running_loss / i))
+                    print('[%d, %4d] loss: %.3f' % (epoch, i + 1, running_loss / (i+1)))
 
-            print("Batch {0:d}, Average loss:{1:.5f}".format(epoch, running_loss / num_loss))
+            print("Epoch {0:d}, Average loss:{1:.5f}".format(epoch, running_loss / num_loss))
 
             if ((abs(last_running_loss - running_loss)/num_loss < delta) or
                 (last_running_loss != 0) and (running_loss > last_running_loss)):
                 training = False
-                print("Stopped trainning")
+                print("Stop trainning")
                 break;
                 #print(abs(last_running_loss - running_loss))
             last_running_loss = running_loss
             running_loss = 0.0
+            num_loss = 0
         print('Finished Training')
 
         #evaluate the fitness
@@ -183,11 +183,15 @@ def eval_genomes(genomes, config):
 
         evaluate_batch_size = 0
         start = 0
-        fit = eval_fitness(net, trainloader, evaluate_batch_size, torch_batch_size, start, gpu)
+        fitness_evaluate = eval_fitness(net, trainloader, evaluate_batch_size, torch_batch_size, start, gpu)
 
-        genome.fitness = fit
-        print('After: {0:3.3f}, {1}'.format(genome.fitness, genome_id))
-        comp.write('{0:3.3f},{1},{2:3.6f},{3:3.6f}\n'.format(genome.fitness, genome_id, lr, delta))
+        test_batch_size = 0
+        start = 0
+        fitness_test = eval_fitness(net, testloader, test_batch_size, torch_batch_size, start, gpu)
+
+        genome.fitness = fitness_evaluate
+        print('After: {0:3.3f}, {1:3.3f}, {2}'.format(fitness_evaluate, fitness_test, genome_id))
+        comp.write('{0:3.3f},{1:3.3f},{2},{3:3.6f},{4:3.6f}\n'.format(fitness_evaluate, fitness_test, genome_id, lr, delta))
         comp.close
 
     #del the net not in current population
@@ -201,12 +205,20 @@ config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
                      neat.DefaultSpeciesSet, neat.DefaultStagnation,
                      'config-mnist')
 
+if torch.cuda.is_available():
+    gpu = True
+    print("Running on GPU!")
+else:
+    gpu = False
+    print("Running on CPU!")
+
 # reset result file
 res = open("result.csv", "w")
 best = open("best.txt", "w")
 res.close()
 best.close()
 comp = open("comp.csv", "w")
+comp.write("num,before,after_eva,after_test,id,lr,delta\n")
 comp.close()
 
 # Create the population, which is the top-level object for a NEAT run.
@@ -224,25 +236,25 @@ winner = p.run(eval_genomes)
 # pe.stop()
 
 # Display the winning genome.
-print('\nBest genome:\n{!s}'.format(winner))
+#print('\nBest genome:\n{!s}'.format(winner))
 
 
 net = evaluate_torch.Net(config, winner)
 if gpu:
     net.cuda()
 
-# train the winner for some epoche
-lrfile = open("lr.txt", "r")
-tmp = lrfile.readline().rstrip('\n')
-lr = float(tmp)
-lrfile.close()
-
-criterion = nn.CrossEntropyLoss()  # use a Classification Cross-Entropy loss
-optimizer = optim.SGD(net.parameters(), lr, momentum=0.9)
-
-final_train_epoch = 10
+final_train_epoch = 40
 
 for epoch in range(final_train_epoch):
+
+    # train the winner for some epoche
+    lrfile = open("lr.txt", "r")
+    tmp = lrfile.readline().rstrip('\n')
+    lr = float(tmp)
+    lrfile.close()
+
+    criterion = nn.CrossEntropyLoss()  # use a Classification Cross-Entropy loss
+    optimizer = optim.SGD(net.parameters(), lr, momentum=0.9)
 
     running_loss = 0.0
 
@@ -269,10 +281,10 @@ for epoch in range(final_train_epoch):
         running_loss += loss.data.item()
 
         # print statistics
-        if i % 200 == 199:  # print every 200 mini-batches
-            print('[%d, %5d] loss: %.3f' % (epoch, i + 1, running_loss / 200))
-            running_loss = 0.0
-        print('Finished Final Training')
+        if i % 50 == 49:  # print every 50 mini-batches
+            print('[%d, %4d] loss: %.3f' % (epoch, i + 1, running_loss / (i+1)))
+    running_loss = 0.0
+print('Finished Final Training')
 
 evaluate_batch_size = 0
 start = 0
