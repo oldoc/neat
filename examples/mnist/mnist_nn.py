@@ -46,6 +46,9 @@ classes = ('plane', 'car', 'bird', 'cat',
 # batch_size = 0 means evaluate until reach the end of the evaluate set
 def eval_fitness(net, loader, batch_size, torch_batch_size, start, gpu):
 
+    #switch to evaluation mode
+    #net.eval()
+
     hit_count = 0
     total = 0
 
@@ -64,7 +67,7 @@ def eval_fitness(net, loader, batch_size, torch_batch_size, start, gpu):
             inputs, labels = Variable(inputs), Variable(labels)
         try:
 
-            outputs = net.forward(inputs)
+            outputs = net.forward_without_dropout(inputs) #TODO: should use mode switch
             _, predicted = torch.max(outputs.data, 1)
             hit_count += (predicted == labels).sum()
 
@@ -73,6 +76,9 @@ def eval_fitness(net, loader, batch_size, torch_batch_size, start, gpu):
 
         if (i == batch_size): #because i > 0 then no need to judge batch_size != 0
             break
+
+    #switch to training mode
+    #net.train(mode = True)
 
     return (hit_count.item() / total)
 
@@ -285,6 +291,10 @@ for epoch in range(final_train_epoch):
             print('[%d, %4d] loss: %.3f' % (epoch, i + 1, running_loss / (i+1)))
     running_loss = 0.0
 print('Finished Final Training')
+
+# save the model founded
+torch.save(net, "model.pkl")
+#net = torch.load("model.pkl")
 
 evaluate_batch_size = 0
 start = 0

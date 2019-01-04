@@ -34,6 +34,30 @@ class Net(nn.Module):
     def forward(self, x):
         l = list(self.children())
         #print(len(l))
+        dropout = nn.Dropout(p=0.25)
+
+        for i in range(self.num_cnn_layer):
+            x = l[2 * i](x)
+            x = l[2*i+1](x)
+            #x = F.batch_norm(x)
+            x = F.sigmoid(x)
+            x = F.max_pool2d(x, 2)
+
+        x = x.view(-1, self.num_flat_features)
+
+        for i in range(self.num_cnn_layer, self.num_layer - 1):
+            x = dropout(x)
+            x = F.sigmoid(l[i + self.num_cnn_layer](x))
+
+        x = dropout(x)
+        x = l[-1](x)
+
+        return (x)
+
+    def forward_without_dropout(self, x):
+        l = list(self.children())
+        #print(len(l))
+        dropout = nn.Dropout(p=0.5)
 
         for i in range(self.num_cnn_layer):
             x = l[2 * i](x)
